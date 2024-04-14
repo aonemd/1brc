@@ -25,7 +25,8 @@ impl City {
 fn main() {
     let mut map: HashMap<String, City> = HashMap::new();
 
-    let input = "./data/measurements.txt";
+    // let input = "./data/measurements.txt";
+    let input = "./data/measurements_1000_000.txt";
 
     let input = std::fs::File::open(input).expect("Failed to read file");
     let reader = BufReader::new(input);
