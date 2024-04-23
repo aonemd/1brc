@@ -34,13 +34,12 @@ fn main() {
     let mut map: HashMap<String, City> = HashMap::new();
 
     let path = "./data/measurements.txt";
-    // let path = "./data/measurements_1000_000.txt";
+    let path = "./data/measurements_10_000_000.txt";
 
     let file = std::fs::File::open(path).expect("Failed to read file");
     let mut reader = BufReader::new(file);
     const BLOCK_SIZE: usize = 16 * 1024 * 1024; // 2_097_152; //2M
     let mut buffer = vec![0_u8; BLOCK_SIZE];
-
     let mut left_over_bytes: Vec<u8> = vec![];
 
     loop {
@@ -50,23 +49,36 @@ fn main() {
         }
 
         left_over_bytes.extend_from_slice(&buffer);
-        left_over_bytes.split(|b| b == &0xA).for_each(|line| {
-            if let Ok(str_line) = std::str::from_utf8(line) {
-                if let Some((name, temp)) = str_line.split_once(';') {
-                    if let Ok(temp) = fast_float(temp) {
-                        if map.contains_key(name) {
-                            let city = map.get_mut(name).unwrap();
-                            city.max = (city.max).max(temp);
-                            city.min = (city.max).min(temp);
-                            city.sum += temp;
-                            city.count += 1;
-                        } else {
-                            map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
-                        }
-                    };
+
+        let mut start = 0;
+        for (i, &byte) in left_over_bytes.iter().enumerate() {
+            if byte == b'\n' {
+                // includes the newline character but the slicing does not since it's
+                // non-inclusive
+                let end = i;
+
+                if let Ok(line) = std::str::from_utf8(&left_over_bytes[start..end]) {
+                    if let Some((name, temp)) = line.split_once(';') {
+                        if let Ok(temp) = fast_float(temp) {
+                            if map.contains_key(name) {
+                                let city = map.get_mut(name).unwrap();
+                                city.max = (city.max).max(temp);
+                                city.min = (city.max).min(temp);
+                                city.sum += temp;
+                                city.count += 1;
+                            } else {
+                                map.insert(
+                                    name.to_string(),
+                                    City::new(name.to_string(), temp, temp),
+                                );
+                            }
+                        };
+                    }
                 }
+
+                start = end + 1;
             }
-        });
+        }
 
         if let Some(last_newline_index) = buffer.iter().rposition(|&b| b == b'\n') {
             left_over_bytes = buffer[last_newline_index + 1..].to_vec();
