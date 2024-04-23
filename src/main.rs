@@ -69,7 +69,7 @@ fn main() {
         });
 
         if let Some(last_newline_index) = buffer.iter().rposition(|&b| b == b'\n') {
-            left_over_bytes = buffer[last_newline_index..].to_vec();
+            left_over_bytes = buffer[last_newline_index + 1..].to_vec();
         }
     }
 
