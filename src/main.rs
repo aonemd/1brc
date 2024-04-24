@@ -1,6 +1,7 @@
 use core::cmp::min;
 use std::collections::HashMap;
 use std::io::{prelude::*, BufReader};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 #[derive(Debug)]
 struct City {
@@ -35,6 +36,7 @@ fn main() {
 
     let path = "./data/measurements.txt";
     let path = "./data/measurements_10_000_000.txt";
+    // let path = "./data/measurements_10.txt";
 
     let file = std::fs::File::open(path).expect("Failed to read file");
     let mut reader = BufReader::new(file);
@@ -42,7 +44,9 @@ fn main() {
     let mut buffer = vec![0_u8; BLOCK_SIZE];
     let mut left_over_bytes: Vec<u8> = vec![];
 
-    loop {
+    let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+
+    std::thread::spawn(move || loop {
         let count = reader.read(&mut buffer).unwrap();
         if count == 0 {
             break;
@@ -50,14 +54,22 @@ fn main() {
 
         left_over_bytes.extend_from_slice(&buffer);
 
+        sender.send(left_over_bytes.clone()).unwrap();
+
+        if let Some(last_newline_index) = buffer.iter().rposition(|&b| b == b'\n') {
+            left_over_bytes = buffer[last_newline_index + 1..].to_vec();
+        }
+    });
+
+    for line_data in receiver {
         let mut start = 0;
-        for (i, &byte) in left_over_bytes.iter().enumerate() {
+        for (i, &byte) in line_data.iter().enumerate() {
             if byte == b'\n' {
                 // includes the newline character but the slicing does not since it's
                 // non-inclusive
                 let end = i;
 
-                if let Ok(line) = std::str::from_utf8(&left_over_bytes[start..end]) {
+                if let Ok(line) = std::str::from_utf8(&line_data[start..end]) {
                     if let Some((name, temp)) = line.split_once(';') {
                         if let Ok(temp) = fast_float(temp) {
                             if map.contains_key(name) {
@@ -78,10 +90,6 @@ fn main() {
 
                 start = end + 1;
             }
-        }
-
-        if let Some(last_newline_index) = buffer.iter().rposition(|&b| b == b'\n') {
-            left_over_bytes = buffer[last_newline_index + 1..].to_vec();
         }
     }
 
