@@ -6,25 +6,58 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 #[derive(Debug)]
 struct City {
     name: String,
-    max: f64,
-    min: f64,
-    sum: f64,
+    max: f32,
+    min: f32,
+    sum: f32,
     count: i32,
 }
 
 impl City {
-    fn new(name: String, max: f64, min: f64) -> Self {
+    fn new(name: String, max: f32, min: f32) -> Self {
         Self {
             name,
             max,
             min,
-            sum: 0f64,
+            sum: 0f32,
             count: 1,
         }
     }
 }
 
-fn fast_float(input: &str) -> Result<f64, std::num::ParseFloatError> {
+fn fast_parse_float(data: &[u8]) -> f32 {
+    let mut result = 0.0;
+    let mut point = false;
+    let mut decimal = 1.0;
+    let mut negative = false;
+    let mut i = 0;
+    if data[0] == b'-' {
+        negative = true;
+        i += 1;
+    }
+    while i < data.len() {
+        let byte = data[i];
+        if byte == b'.' {
+            point = true;
+            i += 1;
+            continue;
+        }
+        let digit = (byte - b'0') as f32;
+        if point {
+            decimal *= 0.1;
+            result += digit * decimal;
+        } else {
+            result = result * 10.0 + digit;
+        }
+        i += 1;
+    }
+    if negative {
+        -result
+    } else {
+        result
+    }
+}
+
+fn fast_float(input: &str) -> Result<f32, std::num::ParseFloatError> {
     let point = input.find('.').unwrap_or(input.len());
     let cutoff = min(point + 3, input.len());
 
@@ -75,19 +108,17 @@ fn main() {
                 let end = i;
 
                 let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
-                let temp = unsafe { std::str::from_utf8_unchecked(&line_data[name_end + 1..end]) };
+                let temp = fast_parse_float(&line_data[name_end + 1..end]);
 
-                if let Ok(temp) = fast_float(temp) {
-                    if map.contains_key(name) {
-                        let city = map.get_mut(name).unwrap();
-                        city.max = (city.max).max(temp);
-                        city.min = (city.max).min(temp);
-                        city.sum += temp;
-                        city.count += 1;
-                    } else {
-                        map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
-                    }
-                };
+                if map.contains_key(name) {
+                    let city = map.get_mut(name).unwrap();
+                    city.max = (city.max).max(temp);
+                    city.min = (city.max).min(temp);
+                    city.sum += temp;
+                    city.count += 1;
+                } else {
+                    map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+                }
 
                 start = end + 1;
                 name_end = 0;
@@ -104,7 +135,7 @@ fn main() {
             "{}={}/{}/{}",
             city.name,
             city.min,
-            city.sum / city.count as f64,
+            city.sum / city.count as f32,
             city.max,
         );
         city_strings.push(city_string);
