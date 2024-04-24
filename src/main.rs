@@ -35,7 +35,7 @@ fn main() {
     let mut map: HashMap<String, City> = HashMap::new();
 
     let path = "./data/measurements.txt";
-    let path = "./data/measurements_10_000_000.txt";
+    let path = "./data/measurements_100_000_000.txt";
     // let path = "./data/measurements_10.txt";
 
     let file = std::fs::File::open(path).expect("Failed to read file");
@@ -63,32 +63,53 @@ fn main() {
 
     for line_data in receiver {
         let mut start = 0;
+        let mut name_end = 0;
         for (i, &byte) in line_data.iter().enumerate() {
-            if byte == b'\n' {
+            if byte == b';' {
+                name_end = i;
+            }
+
+            if byte == b'\n' && start < name_end {
                 // includes the newline character but the slicing does not since it's
                 // non-inclusive
                 let end = i;
 
-                if let Ok(line) = std::str::from_utf8(&line_data[start..end]) {
-                    if let Some((name, temp)) = line.split_once(';') {
-                        if let Ok(temp) = fast_float(temp) {
-                            if map.contains_key(name) {
-                                let city = map.get_mut(name).unwrap();
-                                city.max = (city.max).max(temp);
-                                city.min = (city.max).min(temp);
-                                city.sum += temp;
-                                city.count += 1;
-                            } else {
-                                map.insert(
-                                    name.to_string(),
-                                    City::new(name.to_string(), temp, temp),
-                                );
-                            }
-                        };
+                let name = std::str::from_utf8(&line_data[start..name_end]).unwrap();
+                let temp = std::str::from_utf8(&line_data[name_end + 1..end]).unwrap();
+                // println!("{name}: {temp}");
+                if let Ok(temp) = fast_float(temp) {
+                    if map.contains_key(name) {
+                        let city = map.get_mut(name).unwrap();
+                        city.max = (city.max).max(temp);
+                        city.min = (city.max).min(temp);
+                        city.sum += temp;
+                        city.count += 1;
+                    } else {
+                        map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
                     }
-                }
+                };
+
+                // if let Ok(line) = std::str::from_utf8(&line_data[start..end]) {
+                //     if let Some((name, temp)) = line.split_once(';') {
+                //         if let Ok(temp) = fast_float(temp) {
+                //             if map.contains_key(name) {
+                //                 let city = map.get_mut(name).unwrap();
+                //                 city.max = (city.max).max(temp);
+                //                 city.min = (city.max).min(temp);
+                //                 city.sum += temp;
+                //                 city.count += 1;
+                //             } else {
+                //                 map.insert(
+                //                     name.to_string(),
+                //                     City::new(name.to_string(), temp, temp),
+                //                 );
+                //             }
+                //         };
+                //     }
+                // }
 
                 start = end + 1;
+                name_end = 0;
             }
         }
     }
