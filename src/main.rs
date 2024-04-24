@@ -74,9 +74,9 @@ fn main() {
                 // non-inclusive
                 let end = i;
 
-                let name = std::str::from_utf8(&line_data[start..name_end]).unwrap();
-                let temp = std::str::from_utf8(&line_data[name_end + 1..end]).unwrap();
-                // println!("{name}: {temp}");
+                let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
+                let temp = unsafe { std::str::from_utf8_unchecked(&line_data[name_end + 1..end]) };
+
                 if let Ok(temp) = fast_float(temp) {
                     if map.contains_key(name) {
                         let city = map.get_mut(name).unwrap();
@@ -88,25 +88,6 @@ fn main() {
                         map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
                     }
                 };
-
-                // if let Ok(line) = std::str::from_utf8(&line_data[start..end]) {
-                //     if let Some((name, temp)) = line.split_once(';') {
-                //         if let Ok(temp) = fast_float(temp) {
-                //             if map.contains_key(name) {
-                //                 let city = map.get_mut(name).unwrap();
-                //                 city.max = (city.max).max(temp);
-                //                 city.min = (city.max).min(temp);
-                //                 city.sum += temp;
-                //                 city.count += 1;
-                //             } else {
-                //                 map.insert(
-                //                     name.to_string(),
-                //                     City::new(name.to_string(), temp, temp),
-                //                 );
-                //             }
-                //         };
-                //     }
-                // }
 
                 start = end + 1;
                 name_end = 0;
