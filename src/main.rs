@@ -29,7 +29,7 @@ fn fast_parse_float_to_int(data: &[u8]) -> i32 {
     let mut negative = false;
     let mut result = 0;
 
-    for (i, &byte) in data.iter().enumerate() {
+    for &byte in data.iter() {
         if byte == b'-' {
             negative = true;
             continue;
