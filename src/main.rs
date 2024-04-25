@@ -6,21 +6,49 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 #[derive(Debug)]
 struct City {
     name: String,
-    max: f32,
-    min: f32,
-    sum: f32,
+    max: i32,
+    min: i32,
+    sum: i32,
     count: i32,
 }
 
 impl City {
-    fn new(name: String, max: f32, min: f32) -> Self {
+    fn new(name: String, max: i32, min: i32) -> Self {
         Self {
             name,
             max,
             min,
-            sum: 0f32,
+            sum: 0,
             count: 1,
         }
+    }
+}
+
+fn fast_parse_float_to_int(data: &[u8]) -> i32 {
+    let mut point = false;
+    let mut negative = false;
+    let mut result = 0;
+
+    for (i, &byte) in data.iter().enumerate() {
+        if byte == b'-' {
+            negative = true;
+            continue;
+        }
+
+        if byte == b'.' {
+            point = true;
+            continue;
+        }
+
+        let digit = (byte - b'0') as i32;
+
+        result = result * 10 + digit;
+    }
+
+    if negative {
+        -result
+    } else {
+        result
     }
 }
 
@@ -108,7 +136,7 @@ fn main() {
                 let end = i;
 
                 let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
-                let temp = fast_parse_float(&line_data[name_end + 1..end]);
+                let temp = fast_parse_float_to_int(&line_data[name_end + 1..end]);
 
                 if map.contains_key(name) {
                     let city = map.get_mut(name).unwrap();
@@ -132,15 +160,56 @@ fn main() {
     let mut city_strings = Vec::new();
     for city in &cities {
         let city_string = format!(
-            "{}={}/{}/{}",
+            "{}={:.1}/{:.1}/{:.1}",
             city.name,
-            city.min,
-            city.sum / city.count as f32,
-            city.max,
+            (city.min as f32 / 10.0),
+            ((city.sum / city.count) as f32 / 10.0).ceil(),
+            (city.max as f32 / 10.0),
         );
         city_strings.push(city_string);
     }
 
     let output = format!("{{{}}}", city_strings.join(", "));
     println!("{}", output);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_positive_integer() {
+        let data = b"123";
+        assert_eq!(fast_parse_float_to_int(data), 123);
+    }
+
+    #[test]
+    fn test_negative_integer() {
+        let data = b"-123";
+        assert_eq!(fast_parse_float_to_int(data), -123);
+    }
+
+    #[test]
+    fn test_positive_float() {
+        let data = b"123.45";
+        assert_eq!(fast_parse_float_to_int(data), 12345);
+    }
+
+    #[test]
+    fn test_negative_float() {
+        let data = b"-123.45";
+        assert_eq!(fast_parse_float_to_int(data), -12345);
+    }
+
+    #[test]
+    fn test_zero() {
+        let data = b"0";
+        assert_eq!(fast_parse_float_to_int(data), 0);
+    }
+
+    #[test]
+    fn test_empty() {
+        let data = b"";
+        assert_eq!(fast_parse_float_to_int(data), 0);
+    }
 }
