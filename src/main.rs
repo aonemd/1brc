@@ -1,4 +1,5 @@
 use core::cmp::min;
+use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::io::{prelude::*, BufReader};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -93,7 +94,10 @@ fn fast_float(input: &str) -> Result<f32, std::num::ParseFloatError> {
 }
 
 fn main() {
-    let mut map: HashMap<String, City> = HashMap::new();
+    const NUMBER_OF_UNIQUE_STATIONS: usize = 10_000;
+
+    // let mut map: HashMap<String, City> = HashMap::with_capacity(NUMBER_OF_UNIQUE_STATIONS);
+    let mut map: FxHashMap<String, City> = FxHashMap::default();
 
     let path = "./data/measurements.txt";
     let path = "./data/measurements_100_000_000.txt";
