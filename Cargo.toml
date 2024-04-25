@@ -12,5 +12,7 @@ path = "src/main.rs"
 [profile.profiling]
 inherits = "release"
 debug = true
+incremental = true
+lto = "fat"
 
 [dependencies]
