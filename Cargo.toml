@@ -16,3 +16,4 @@ incremental = true
 lto = "fat"
 
 [dependencies]
+rustc-hash = "1.1.0"
