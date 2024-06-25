@@ -106,7 +106,8 @@ fn main() {
     // let path = "./data/measurements_100_000_000.txt";
     // let path = "./data/measurements_1000_000.txt";
     // let path = "./data/measurements_10_000_000.txt";
-    let path = "./data/measurements_100.txt";
+    let path = "./data/measurements_10_000_000.txt";
+    // let path = "./data/measurements_100.txt";
 
     let file_length: usize = metadata(path)
         .expect("Unable to query file details")
@@ -176,17 +177,17 @@ fn main() {
                 }
                 bytes_read += count;
 
-                // let line_data = [buffer.clone(), buf].concat();
-                // // let cleaned_data = line_data;
+                let line_data = [buffer.clone(), buf].concat();
+                // let cleaned_data = line_data;
                 // // let cleaned_data = buffer.clone();
-                // let cleaned_data: Vec<u8> = line_data
-                //     .iter()
-                //     .cloned()
-                //     .filter(|&byte| byte != 0)
-                //     .collect();
+                let cleaned_data: Vec<u8> = line_data
+                    .iter()
+                    .cloned()
+                    .filter(|&byte| byte != 0)
+                    .collect();
                 // println!("{:?}", std::str::from_utf8(&cleaned_data));
 
-                sender_clone.send((buffer.clone(), buf)).unwrap();
+                // sender_clone.send((buffer.clone(), buf)).unwrap();
                 // println!(
                 //     "read: {:?} {:?}",
                 //     bytes_read,
@@ -229,79 +230,79 @@ fn main() {
         pool.push(thr);
     }
 
-    drop(sender);
+    // drop(sender);
+    //
+    // for line_data in receiver {
+    //     let mut line_data = [line_data.0, line_data.1].concat();
+    //
+    //     // println!("{:?}", std::str::from_utf8(&line_data));
+    //     // println!(
+    //     //     "@@@@@@@*************************!!!!!!!!!!!!!!!!!!!{:?}",
+    //     //     line_data.len()
+    //     // );
+    //
+    //     let mut start = 0;
+    //     let mut name_end = 0;
+    //     for (i, &byte) in line_data.iter().enumerate() {
+    //         if byte == b';' {
+    //             name_end = i;
+    //         }
+    //
+    //         if byte == b'\n' && start < name_end {
+    //             // includes the newline character but the slicing does not since it's
+    //             // non-inclusive
+    //             let end = i;
+    //
+    //             // let name = std::str::from_utf8(&line_data[start..name_end]).unwrap();
+    //             let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
+    //             let temp = fast_parse_float_to_int(&line_data[name_end + 1..end]);
+    //
+    //             // let city =
+    //             //     map.entry(name.to_string())
+    //             //         .or_insert(City::new(name.to_string(), temp, temp));
+    //             // city.max = (city.max).max(temp);
+    //             // city.min = (city.max).min(temp);
+    //             // city.sum += temp;
+    //             // city.count += 1;
+    //
+    //             if map.contains_key(name) {
+    //                 let city = map.get_mut(name).unwrap();
+    //                 city.max = (city.max).max(temp);
+    //                 city.min = (city.max).min(temp);
+    //                 city.sum += temp;
+    //                 city.count += 1;
+    //             } else {
+    //                 map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+    //             }
+    //
+    //             start = end + 1;
+    //             name_end = 0;
+    //         }
+    //     }
+    // }
 
     for thr in pool {
         thr.join().unwrap();
     }
 
-    for line_data in receiver {
-        let mut line_data = [line_data.0, line_data.1].concat();
-
-        // println!("{:?}", std::str::from_utf8(&line_data));
-        // println!(
-        //     "@@@@@@@*************************!!!!!!!!!!!!!!!!!!!{:?}",
-        //     line_data.len()
-        // );
-
-        let mut start = 0;
-        let mut name_end = 0;
-        for (i, &byte) in line_data.iter().enumerate() {
-            if byte == b';' {
-                name_end = i;
-            }
-
-            if byte == b'\n' && start < name_end {
-                // includes the newline character but the slicing does not since it's
-                // non-inclusive
-                let end = i;
-
-                // let name = std::str::from_utf8(&line_data[start..name_end]).unwrap();
-                let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
-                let temp = fast_parse_float_to_int(&line_data[name_end + 1..end]);
-
-                // let city =
-                //     map.entry(name.to_string())
-                //         .or_insert(City::new(name.to_string(), temp, temp));
-                // city.max = (city.max).max(temp);
-                // city.min = (city.max).min(temp);
-                // city.sum += temp;
-                // city.count += 1;
-
-                if map.contains_key(name) {
-                    let city = map.get_mut(name).unwrap();
-                    city.max = (city.max).max(temp);
-                    city.min = (city.max).min(temp);
-                    city.sum += temp;
-                    city.count += 1;
-                } else {
-                    map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
-                }
-
-                start = end + 1;
-                name_end = 0;
-            }
-        }
-    }
-
-    let mut cities = map.into_values().collect::<Vec<City>>();
-    cities.sort_by(|a, b| a.name.cmp(&b.name));
-
-    let mut city_strings = Vec::new();
-    for city in &cities {
-        let city_string = format!(
-            "{}={:.1}/{:.1}/{:.1}",
-            city.name,
-            (city.min as f32 / 10.0),
-            ((city.sum / city.count) as f32 / 10.0).ceil(),
-            (city.max as f32 / 10.0),
-        );
-        city_strings.push(city_string);
-    }
-
-    let output = format!("{{{}}}", city_strings.join(", "));
-    println!("{}", output);
-    println!("len === {:?}", city_strings.len());
+    // let mut cities = map.into_values().collect::<Vec<City>>();
+    // cities.sort_by(|a, b| a.name.cmp(&b.name));
+    //
+    // let mut city_strings = Vec::new();
+    // for city in &cities {
+    //     let city_string = format!(
+    //         "{}={:.1}/{:.1}/{:.1}",
+    //         city.name,
+    //         (city.min as f32 / 10.0),
+    //         ((city.sum / city.count) as f32 / 10.0).ceil(),
+    //         (city.max as f32 / 10.0),
+    //     );
+    //     city_strings.push(city_string);
+    // }
+    //
+    // let output = format!("{{{}}}", city_strings.join(", "));
+    // println!("{}", output);
+    // println!("len === {:?}", city_strings.len());
 }
 
 #[cfg(test)]
