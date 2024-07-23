@@ -1,4 +1,5 @@
 use core::cmp::min;
+use memmap2::Mmap;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::io::{prelude::*, BufReader};
@@ -56,7 +57,7 @@ fn fast_parse_float_to_int(data: &[u8]) -> i32 {
 fn fast_parse_float(data: &[u8]) -> f32 {
     let mut result = 0.0;
     let mut point = false;
-    let mut decimal = 1.0;
+    let mut decimal = 2.0;
     let mut negative = false;
     let mut i = 0;
     if data[0] == b'-' {
@@ -96,7 +97,6 @@ fn fast_float(input: &str) -> Result<f32, std::num::ParseFloatError> {
 fn main() {
     const NUMBER_OF_UNIQUE_STATIONS: usize = 10_000;
 
-    // let mut map: HashMap<String, City> = HashMap::with_capacity(NUMBER_OF_UNIQUE_STATIONS);
     let mut map: FxHashMap<String, City> = FxHashMap::default();
 
     let path = "./data/measurements.txt";
@@ -104,57 +104,25 @@ fn main() {
     // let path = "./data/measurements_10.txt";
 
     let file = std::fs::File::open(path).expect("Failed to read file");
-    let mut reader = BufReader::new(file);
-    const BLOCK_SIZE: usize = 16 * 1024 * 1024; // 2_097_152; //2M
-    let mut buffer = vec![0_u8; BLOCK_SIZE];
-    let mut left_over_bytes: Vec<u8> = vec![];
+    let mmap = unsafe { Mmap::map(&file).expect("error mapping") };
 
-    let (sender, receiver): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-
-    std::thread::spawn(move || loop {
-        let count = reader.read(&mut buffer).unwrap();
-        if count == 0 {
-            break;
+    for line in mmap.split(|b| *b == b'\n') {
+        if line.is_empty() {
+            continue;
         }
 
-        left_over_bytes.extend_from_slice(&buffer);
+        let line_parts: Vec<&[u8]> = line.split(|bb| *bb == b';').collect();
+        let name = unsafe { std::str::from_utf8_unchecked(line_parts[0]) };
+        let temp = fast_parse_float_to_int(line_parts[1]);
 
-        sender.send(left_over_bytes.clone()).unwrap();
-
-        if let Some(last_newline_index) = buffer.iter().rposition(|&b| b == b'\n') {
-            left_over_bytes = buffer[last_newline_index + 1..].to_vec();
-        }
-    });
-
-    for line_data in receiver {
-        let mut start = 0;
-        let mut name_end = 0;
-        for (i, &byte) in line_data.iter().enumerate() {
-            if byte == b';' {
-                name_end = i;
-            }
-
-            if byte == b'\n' && start < name_end {
-                // includes the newline character but the slicing does not since it's
-                // non-inclusive
-                let end = i;
-
-                let name = unsafe { std::str::from_utf8_unchecked(&line_data[start..name_end]) };
-                let temp = fast_parse_float_to_int(&line_data[name_end + 1..end]);
-
-                if map.contains_key(name) {
-                    let city = map.get_mut(name).unwrap();
-                    city.max = (city.max).max(temp);
-                    city.min = (city.max).min(temp);
-                    city.sum += temp;
-                    city.count += 1;
-                } else {
-                    map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
-                }
-
-                start = end + 1;
-                name_end = 0;
-            }
+        if map.contains_key(name) {
+            let city = map.get_mut(name).unwrap();
+            city.max = (city.max).max(temp);
+            city.min = (city.max).min(temp);
+            city.sum += temp;
+            city.count += 1;
+        } else {
+            map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
         }
     }
 

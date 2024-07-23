@@ -17,3 +17,4 @@ lto = "fat"
 
 [dependencies]
 rustc-hash = "1.1.0"
+memmap2 = "0.9.4"
