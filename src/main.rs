@@ -100,7 +100,7 @@ fn main() {
     let mut map: FxHashMap<String, City> = FxHashMap::default();
 
     let path = "./data/measurements.txt";
-    let path = "./data/measurements_100_000_000.txt";
+    // let path = "./data/measurements_100_000_000.txt";
     // let path = "./data/measurements_10.txt";
 
     let file = std::fs::File::open(path).expect("Failed to read file");
