@@ -1,0 +1,12 @@
+v3 -- mmap
+35.69user 3.38system 0:41.52elapsed 94%CPU (0avgtext+0avgdata 13474172maxresident)k
+26943912inputs+0outputs (1major+210625minor)pagefaults 0swaps
+
+
+v2
+57.61user 1.06system 0:58.76elapsed 99%CPU (0avgtext+0avgdata 34808maxresident)k
+0inputs+0outputs (0major+648minor)pagefaults 0swaps
+
+v1
+71.60user 1.05system 1:12.76elapsed 99%CPU (0avgtext+0avgdata 2160maxresident)k
+0inputs+0outputs (0major+119minor)pagefaults 0swaps
