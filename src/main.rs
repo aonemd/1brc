@@ -118,7 +118,7 @@ fn main() {
         if map.contains_key(name) {
             let city = map.get_mut(name).unwrap();
             city.max = (city.max).max(temp);
-            city.min = (city.max).min(temp);
+            city.min = (city.min).min(temp);
             city.sum += temp;
             city.count += 1;
         } else {
