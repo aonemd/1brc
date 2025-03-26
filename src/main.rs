@@ -20,7 +20,7 @@ impl City {
             name,
             max,
             min,
-            sum: 0,
+            sum: max,
             count: 1,
         }
     }
