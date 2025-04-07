@@ -129,19 +129,20 @@ fn main() {
     let mut cities = map.into_values().collect::<Vec<City>>();
     cities.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let mut city_strings = Vec::new();
-    for city in &cities {
-        let city_string = format!(
+    let mut output = String::from("{");
+    for (i, city) in cities.iter().enumerate() {
+        if i > 0 {
+            output.push_str(", ");
+        }
+        output.push_str(&format!(
             "{}={:.1}/{:.1}/{:.1}",
             city.name,
             (city.min as f32 / 10.0),
             ((city.sum / city.count) as f32 / 10.0).ceil(),
             (city.max as f32 / 10.0),
-        );
-        city_strings.push(city_string);
+        ));
     }
-
-    let output = format!("{{{}}}", city_strings.join(", "));
+    output.push('}');
     println!("{}", output);
 }
 
