@@ -111,9 +111,9 @@ fn main() {
             continue;
         }
 
-        let line_parts: Vec<&[u8]> = line.split(|bb| *bb == b';').collect();
-        let name = unsafe { std::str::from_utf8_unchecked(line_parts[0]) };
-        let temp = fast_parse_float_to_int(line_parts[1]);
+        let mut line_parts = line.split(|bb| *bb == b';');
+        let name = unsafe { std::str::from_utf8_unchecked(line_parts.next().unwrap()) };
+        let temp = fast_parse_float_to_int(line_parts.next().unwrap());
 
         if map.contains_key(name) {
             let city = map.get_mut(name).unwrap();
