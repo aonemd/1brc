@@ -4,6 +4,8 @@ use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::io::{prelude::*, BufReader};
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::Arc;
+use std::thread;
 
 #[derive(Debug)]
 struct City {
@@ -105,24 +107,59 @@ fn main() {
 
     let file = std::fs::File::open(path).expect("Failed to read file");
     let mmap = unsafe { Mmap::map(&file).expect("error mapping") };
+    let mmap = Arc::new(mmap);
 
-    for line in mmap.split(|b| *b == b'\n') {
-        if line.is_empty() {
-            continue;
-        }
+    let file_length = file.metadata().unwrap().len() as usize;
+    const _MAX_BLOCK_SIZE: usize = 16 * 1024 * 1024; // 2_097_152; //2M
+    const THREAD_COUNT: usize = 8;
+    let chunk_size: usize = file_length / THREAD_COUNT;
 
-        let mut line_parts = line.split(|bb| *bb == b';');
-        let name = unsafe { std::str::from_utf8_unchecked(line_parts.next().unwrap()) };
-        let temp = fast_parse_float_to_int(line_parts.next().unwrap());
+    let (tx, rx) = channel();
 
-        if map.contains_key(name) {
-            let city = map.get_mut(name).unwrap();
-            city.max = (city.max).max(temp);
-            city.min = (city.min).min(temp);
-            city.sum += temp;
-            city.count += 1;
-        } else {
-            map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+    for i in 0..THREAD_COUNT {
+        let tx = tx.clone();
+        let mmap_chunk = Arc::clone(&mmap);
+
+        thread::spawn(move || {
+            let mut local_map: FxHashMap<String, City> = FxHashMap::default();
+
+            for line in mmap_chunk[i * chunk_size..(i + 1) * chunk_size].split(|b| *b == b'\n') {
+                if line.is_empty() {
+                    continue;
+                }
+
+                let mut line_parts = line.split(|bb| *bb == b';');
+                let name = unsafe { std::str::from_utf8_unchecked(line_parts.next().unwrap()) };
+                let temp = fast_parse_float_to_int(line_parts.next().unwrap());
+
+                if local_map.contains_key(name) {
+                    let city = local_map.get_mut(name).unwrap();
+                    city.max = (city.max).max(temp);
+                    city.min = (city.min).min(temp);
+                    city.sum += temp;
+                    city.count += 1;
+                } else {
+                    local_map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+                }
+            }
+
+            tx.send(local_map).expect("Failed to send data");
+        });
+    }
+
+    drop(tx);
+
+    for received_map in rx {
+        for (name, city) in received_map {
+            if map.contains_key(&name) {
+                let global_city = map.get_mut(&name).unwrap();
+                global_city.max = (global_city.max).max(city.max);
+                global_city.min = (global_city.min).min(city.min);
+                global_city.sum += city.sum;
+                global_city.count += city.count;
+            } else {
+                map.insert(name, city);
+            }
         }
     }
 
