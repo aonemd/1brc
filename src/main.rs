@@ -131,8 +131,17 @@ fn main() {
                 }
 
                 let mut line_parts = line.split(|bb| *bb == b';');
-                let name = unsafe { std::str::from_utf8_unchecked(line_parts.next().unwrap()) };
-                let temp = fast_parse_float_to_int(line_parts.next().unwrap());
+                let name = match line_parts.next() {
+                    Some(name) => name,
+                    None => continue,
+                };
+                let temp = match line_parts.next() {
+                    Some(temp) => temp,
+                    None => continue,
+                };
+
+                let name = unsafe { std::str::from_utf8_unchecked(name) };
+                let temp = fast_parse_float_to_int(temp);
 
                 if local_map.contains_key(name) {
                     let city = local_map.get_mut(name).unwrap();
