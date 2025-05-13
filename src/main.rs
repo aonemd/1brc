@@ -123,7 +123,9 @@ fn main() {
         thread::spawn(move || {
             let mut local_map: FxHashMap<String, City> = FxHashMap::default();
 
-            for line in mmap_chunk[i * chunk_size..(i + 1) * chunk_size].split(|b| *b == b'\n') {
+            let start = i * chunk_size;
+            let end = (((i + 1) * chunk_size) + 100).min(file_length);
+            for line in mmap_chunk[start..end].split(|b| *b == b'\n') {
                 if line.is_empty() {
                     continue;
                 }
