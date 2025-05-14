@@ -96,6 +96,15 @@ fn fast_float(input: &str) -> Result<f32, std::num::ParseFloatError> {
     (&input[0..cutoff]).parse()
 }
 
+fn find_next_newline(data: &[u8]) -> Option<usize> {
+    for (i, &b) in data.iter().enumerate() {
+        if b == b'\n' {
+            return Some(i);
+        }
+    }
+    None
+}
+
 fn main() {
     const NUMBER_OF_UNIQUE_STATIONS: usize = 10_000;
 
@@ -107,12 +116,30 @@ fn main() {
 
     let file = std::fs::File::open(path).expect("Failed to read file");
     let mmap = unsafe { Mmap::map(&file).expect("error mapping") };
+    let mmap_len = mmap.len();
     let mmap = Arc::new(mmap);
 
-    let file_length = file.metadata().unwrap().len() as usize;
     const _MAX_BLOCK_SIZE: usize = 16 * 1024 * 1024; // 2_097_152; //2M
     const THREAD_COUNT: usize = 8;
+    let file_length = file.metadata().unwrap().len() as usize;
     let chunk_size: usize = file_length / THREAD_COUNT;
+
+    let mut chunk_ranges = Vec::new();
+    let mut start = 0;
+    while start < mmap_len {
+        let mut end = (start + chunk_size).min(mmap_len);
+
+        if end < mmap_len {
+            if let Some(newline_pos) = find_next_newline(&mmap[end..]) {
+                end += newline_pos + 1; // include '\n'
+            } else {
+                end = mmap_len; // no newline until EOF
+            }
+        }
+
+        chunk_ranges.push((start, end));
+        start = end;
+    }
 
     let (tx, rx) = channel();
 
@@ -120,37 +147,47 @@ fn main() {
         let tx = tx.clone();
         let mmap_chunk = Arc::clone(&mmap);
 
+        let chunk_range = chunk_ranges[i];
+        let start = chunk_range.0;
+        let end = chunk_range.1;
+
         thread::spawn(move || {
             let mut local_map: FxHashMap<String, City> = FxHashMap::default();
 
-            let start = i * chunk_size;
-            let end = (((i + 1) * chunk_size) + 100).min(file_length);
-            for line in mmap_chunk[start..end].split(|b| *b == b'\n') {
-                if line.is_empty() {
-                    continue;
+            let mut last_newline = start;
+            let mut last_split_at = 0;
+            for i in start..end {
+                let b = mmap_chunk[i];
+
+                if b == b';' {
+                    last_split_at = i;
                 }
 
-                let mut line_parts = line.split(|bb| *bb == b';');
-                let name = match line_parts.next() {
-                    Some(name) => name,
-                    None => continue,
-                };
-                let temp = match line_parts.next() {
-                    Some(temp) => temp,
-                    None => continue,
-                };
+                if b == b'\n' {
+                    let line_start = last_newline;
+                    let line_end = i; // '\n' is excluded in all ranges since we're using [start..end]
+                    last_newline = i + 1;
 
-                let name = unsafe { std::str::from_utf8_unchecked(name) };
-                let temp = fast_parse_float_to_int(temp);
+                    // split the line here
+                    if last_split_at <= line_start {
+                        continue;
+                    }
 
-                if local_map.contains_key(name) {
-                    let city = local_map.get_mut(name).unwrap();
-                    city.max = (city.max).max(temp);
-                    city.min = (city.min).min(temp);
-                    city.sum += temp;
-                    city.count += 1;
-                } else {
-                    local_map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+                    let name = &mmap_chunk[line_start..last_split_at];
+                    let temp = &mmap_chunk[(last_split_at + 1)..line_end];
+
+                    let name = unsafe { std::str::from_utf8_unchecked(name) };
+                    let temp = fast_parse_float_to_int(temp);
+
+                    if local_map.contains_key(name) {
+                        let city = local_map.get_mut(name).unwrap();
+                        city.max = (city.max).max(temp);
+                        city.min = (city.min).min(temp);
+                        city.sum += temp;
+                        city.count += 1;
+                    } else {
+                        local_map.insert(name.to_string(), City::new(name.to_string(), temp, temp));
+                    }
                 }
             }
 
