@@ -1,9 +1,6 @@
-use core::cmp::min;
 use memmap2::Mmap;
 use rustc_hash::FxHashMap;
-use std::collections::HashMap;
-use std::io::{prelude::*, BufReader};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::thread;
 
@@ -29,7 +26,6 @@ impl City {
 }
 
 fn fast_parse_float_to_int(data: &[u8]) -> i32 {
-    let mut point = false;
     let mut negative = false;
     let mut result = 0;
 
@@ -40,7 +36,6 @@ fn fast_parse_float_to_int(data: &[u8]) -> i32 {
         }
 
         if byte == b'.' {
-            point = true;
             continue;
         }
 
@@ -56,46 +51,6 @@ fn fast_parse_float_to_int(data: &[u8]) -> i32 {
     }
 }
 
-fn fast_parse_float(data: &[u8]) -> f32 {
-    let mut result = 0.0;
-    let mut point = false;
-    let mut decimal = 2.0;
-    let mut negative = false;
-    let mut i = 0;
-    if data[0] == b'-' {
-        negative = true;
-        i += 1;
-    }
-    while i < data.len() {
-        let byte = data[i];
-        if byte == b'.' {
-            point = true;
-            i += 1;
-            continue;
-        }
-        let digit = (byte - b'0') as f32;
-        if point {
-            decimal *= 0.1;
-            result += digit * decimal;
-        } else {
-            result = result * 10.0 + digit;
-        }
-        i += 1;
-    }
-    if negative {
-        -result
-    } else {
-        result
-    }
-}
-
-fn fast_float(input: &str) -> Result<f32, std::num::ParseFloatError> {
-    let point = input.find('.').unwrap_or(input.len());
-    let cutoff = min(point + 3, input.len());
-
-    (&input[0..cutoff]).parse()
-}
-
 fn find_next_newline(data: &[u8]) -> Option<usize> {
     for (i, &b) in data.iter().enumerate() {
         if b == b'\n' {
@@ -106,8 +61,6 @@ fn find_next_newline(data: &[u8]) -> Option<usize> {
 }
 
 fn main() {
-    const NUMBER_OF_UNIQUE_STATIONS: usize = 10_000;
-
     let mut map: FxHashMap<String, City> = FxHashMap::default();
 
     let path = "./data/measurements.txt";
