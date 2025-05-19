@@ -223,7 +223,7 @@ fn main() {
             "{}={:.1}/{:.1}/{:.1}",
             city.name,
             (city.min as f32 / 10.0),
-            ((city.sum / city.count) as f32 / 10.0).ceil(),
+            ((city.sum as f32 / 10.0) / city.count as f32),
             (city.max as f32 / 10.0),
         ));
     }
